@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>School Exhibition Feedback</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 2rem 1rem;
+      color: white;
+      position: relative;
+      min-height: 100vh;
+      z-index: 1;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('https://content3.jdmagicbox.com/v2/comp/mangalore/a3/0824px824.x824.220611215818.p4a3/catalogue/shree-gujarati-english-medium-school-kudroli-mangalore-schools-w3bucdhvzg.jpg') no-repeat center center/cover;
+      opacity: 0.7;
+      z-index: -1;
+    }
+
+    img.logo {
+      width: 100px;
+      height: auto;
+      margin-bottom: 1rem;
+    }
+
+    button {
+      display: block;
+      width: 80%;
+      max-width: 300px;
+      margin: 1rem auto;
+      padding: 1rem;
+      font-size: 1rem;
+      background-color: white;
+      color: navy;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    input[type="text"], textarea {
+      padding: 0.75rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      border: none;
+      width: 80%;
+      max-width: 300px;
+      margin: 0.5rem auto;
+      display: block;
+    }
+
+    textarea:disabled {
+      cursor: not-allowed;
+    }
+
+    #chartContainer {
+      max-width: 600px;
+      margin: 2rem auto;
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      color: black;
+    }
+
+    .pin-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      max-width: 200px;
+      margin: 1rem auto;
+    }
+
+    .pin-buttons button {
+      padding: 1rem;
+      font-size: 1.2rem;
+    }
+
+    #pinInput {
+      letter-spacing: 0.4rem;
+      text-align: center;
+    }
+
+    #historyLog {
+      text-align: left;
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 1rem;
+      color: black;
+      border-radius: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+  </style>
+</head>
+<body>
+
+  <img src="https://www.sgmaems.org/wp-content/uploads/cropped-Logo-scaled-1.jpg.webp" class="logo" alt="School Logo" />
+
+  <h1>Shree Gujarati English Medium High School</h1>
+  <h2>Give Your Feedback</h2>
+
+  <button onclick="submitFeedback('Excellent')">Excellent</button>
+  <button onclick="submitFeedback('Good')">Good</button>
+  <button onclick="submitFeedback('Satisfactory')">Satisfactory</button>
+  <button onclick="submitFeedback('Other')">Other</button>
+
+  <textarea id="commentBox" placeholder="Write your comment..."></textarea>
+  <button onclick="sendComment()">Send</button>
+
+  <h3>Admin Login (PIN)</h3>
+  <input type="text" id="pinInput" maxlength="4" disabled />
+  <div class="pin-buttons">
+    <button onclick="enterPin('1')">1</button>
+    <button onclick="enterPin('2')">2</button>
+    <button onclick="enterPin('3')">3</button>
+    <button onclick="enterPin('4')">4</button>
+    <button onclick="enterPin('5')">5</button>
+    <button onclick="enterPin('6')">6</button>
+    <button onclick="enterPin('7')">7</button>
+    <button onclick="enterPin('8')">8</button>
+    <button onclick="enterPin('9')">9</button>
+    <button onclick="clearPin()">C</button>
+    <button onclick="enterPin('0')">0</button>
+    <button onclick="checkPin()">OK</button>
+  </div>
+  <p id="loginErrorMsg" style="color: red;"></p>
+
+  <div id="adminPanel" style="display: none;">
+    <h2>Feedback Counts</h2>
+    <div id="countSummary"></div>
+    <div id="chartContainer">
+      <canvas id="feedbackChart" height="200"></canvas>
+    </div>
+    <h3>Feedback History</h3>
+    <div id="historyLog"></div>
+    <button onclick="logout()">Logout</button>
+    <button onclick="resetData()" style="background-color: red; color: white;">Reset</button>
+  </div>
+
+  <script>
+    const ADMIN_PIN = "1234";
+    let currentPin = "";
+    let feedbackLog = JSON.parse(localStorage.getItem("feedbackLog") || "[]");
+
+    function submitFeedback(type) {
+      const dateTime = new Date().toLocaleString();
+      feedbackLog.push({ type, date: dateTime, comment: "" });
+      localStorage.setItem("feedbackLog", JSON.stringify(feedbackLog));
+
+      disableInput(5000);
+    }
+
+    function sendComment() {
+      const comment = document.getElementById("commentBox").value.trim();
+      if (!comment) return;
+
+      const dateTime = new Date().toLocaleString();
+      feedbackLog.push({ type: "Comment", date: dateTime, comment });
+      localStorage.setItem("feedbackLog", JSON.stringify(feedbackLog));
+      document.getElementById("commentBox").value = "";
+
+      disableInput(5000);
+    }
+
+    function disableInput(duration) {
+      document.querySelectorAll("button").forEach(btn => btn.disabled = true);
+      const textarea = document.getElementById("commentBox");
+      textarea.disabled = true;
+      textarea.blur();
+      setTimeout(() => {
+        document.querySelectorAll("button").forEach(btn => btn.disabled = false);
+        textarea.disabled = false;
+      }, duration);
+    }
+
+    function enterPin(num) {
+      if (currentPin.length < 4) {
+        currentPin += num;
+        document.getElementById("pinInput").value = "*".repeat(currentPin.length);
+      }
+    }
+
+    function clearPin() {
+      currentPin = "";
+      document.getElementById("pinInput").value = "";
+      document.getElementById("loginErrorMsg").textContent = "";
+    }
+
+    function checkPin() {
+      if (currentPin === ADMIN_PIN) {
+        sessionStorage.setItem("isLoggedIn", "true");
+        clearPin();
+        showAdminPanel();
+      } else {
+        document.getElementById("loginErrorMsg").textContent = "Incorrect PIN.";
+        clearPin();
+      }
+    }
+
+    function logout() {
+      sessionStorage.removeItem("isLoggedIn");
+      document.getElementById("adminPanel").style.display = "none";
+    }
+
+    function resetData() {
+      if (confirm("Are you sure you want to reset all feedback?")) {
+        feedbackLog = [];
+        localStorage.removeItem("feedbackLog");
+        logout();
+      }
+    }
+
+    function showAdminPanel() {
+      document.getElementById("adminPanel").style.display = "block";
+
+      const counts = { Excellent: 0, Good: 0, Satisfactory: 0, Other: 0 };
+      document.getElementById("historyLog").innerHTML = "";
+
+      feedbackLog.forEach(entry => {
+        if (counts[entry.type] !== undefined) counts[entry.type]++;
+        const commentText = entry.comment ? `<br><b>Comment:</b> ${entry.comment}` : "";
+        document.getElementById("historyLog").innerHTML += `
+          <p><b>${entry.type}</b> — ${entry.date}${commentText}</p>
+        `;
+      });
+
+      document.getElementById("countSummary").innerHTML = `
+        <p>Excellent: ${counts.Excellent}</p>
+        <p>Good: ${counts.Good}</p>
+        <p>Satisfactory: ${counts.Satisfactory}</p>
+        <p>Other: ${counts.Other}</p>
+      `;
+
+      renderChart(counts);
+    }
+
+    function renderChart(data) {
+      const ctx = document.getElementById("feedbackChart").getContext("2d");
+      if (window.barChart) window.barChart.destroy();
+      window.barChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Excellent', 'Good', 'Satisfactory', 'Other'],
+          datasets: [{
+            label: 'Feedback Count',
+            data: [data.Excellent, data.Good, data.Satisfactory, data.Other],
+            backgroundColor: ['green', 'blue', 'orange', 'gray']
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    window.onload = () => {
+      if (sessionStorage.getItem("isLoggedIn") === "true") {
+        showAdminPanel();
+      }
+    };
+  </script>
+
+</body>
+</html>
